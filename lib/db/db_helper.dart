@@ -67,6 +67,7 @@ class DBHelper {
         example TEXT
       )
     ''');
+  }
 
   // ---- Settings (reminder time / frequency) ----
 
