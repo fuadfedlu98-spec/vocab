@@ -3,6 +3,8 @@ import 'add_word_screen.dart';
 import 'word_list_screen.dart';
 import 'quiz_screen.dart';
 import 'settings_screen.dart';
+import 'book_home_screen.dart';
+import 'dictionary_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -18,6 +20,18 @@ class HomeScreen extends StatelessWidget {
           mainAxisSpacing: 16,
           crossAxisSpacing: 16,
           children: [
+            _HomeTile(
+              icon: Icons.menu_book,
+              label: 'English Course',
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const BookHomeScreen())),
+            ),
+            _HomeTile(
+              icon: Icons.import_contacts,
+              label: 'Dictionary',
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const DictionaryScreen())),
+            ),
             _HomeTile(
               icon: Icons.add_circle_outline,
               label: 'Add Word',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/notification_service.dart';
+import 'services/dictionary_service.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
@@ -9,6 +10,8 @@ void main() async {
   // app restarts (the device scheduler itself also survives reboot
   // once configured, but this keeps state in sync if it was cleared).
   await NotificationService.instance.restoreSchedule();
+  // One-time load of the bundled compact dictionary into SQLite.
+  await DictionaryService.instance.ensureOfflineDictionaryLoaded();
   runApp(const VocabApp());
 }
 
