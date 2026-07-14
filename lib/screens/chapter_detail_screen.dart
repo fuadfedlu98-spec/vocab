@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../db/db_helper.dart';
 import '../models/chapter.dart';
 import '../services/book_service.dart';
+import '../services/ai_service.dart';
 
 class ChapterDetailScreen extends StatefulWidget {
   final int chapterNumber;
@@ -15,6 +16,8 @@ class _ChapterDetailScreenState extends State<ChapterDetailScreen> {
   Chapter? _chapter;
   Set<int> _checked = {};
   bool _completed = false;
+  List<Map<String, String>> _aiQuestions = [];
+  bool _generatingQuestions = false;
 
   @override
   void initState() {
@@ -69,6 +72,30 @@ class _ChapterDetailScreenState extends State<ChapterDetailScreen> {
     );
   }
 
+  Future<void> _generateAiQuestions() async {
+    final apiKey = await AIService.instance.getApiKey();
+    if (apiKey == null || apiKey.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add your AI API key in Settings first.')),
+      );
+      return;
+    }
+    setState(() => _generatingQuestions = true);
+    final questions = await AIService.instance.generateChapterQuestions(_chapter!);
+    if (!mounted) return;
+    setState(() {
+      _aiQuestions = questions;
+      _generatingQuestions = false;
+    });
+    if (questions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Could not generate questions - check your internet and API key.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final chapter = _chapter;
@@ -116,6 +143,47 @@ class _ChapterDetailScreenState extends State<ChapterDetailScreen> {
                   ?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           ...chapter.drills.map((d) => _DrillCard(drill: d)),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Text('AI Practice Questions',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+              ),
+              if (_generatingQuestions)
+                const SizedBox(
+                    height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              else
+                TextButton.icon(
+                  onPressed: _generateAiQuestions,
+                  icon: const Icon(Icons.auto_awesome, size: 18),
+                  label: Text(_aiQuestions.isEmpty ? 'Generate' : 'Regenerate'),
+                ),
+            ],
+          ),
+          if (_aiQuestions.isEmpty && !_generatingQuestions)
+            Text(
+              'Optional - needs your AI API key (set in Settings) and internet.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ..._aiQuestions.map((q) => Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ExpansionTile(
+                  title: Text(q['question'] ?? ''),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(q['answer'] ?? ''),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
           if (chapter.mistakes.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text('Mistakes to Avoid',

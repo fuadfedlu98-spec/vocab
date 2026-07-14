@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/word.dart';
+import '../models/note.dart';
 
 class DBHelper {
   DBHelper._internal();
@@ -20,7 +21,7 @@ class DBHelper {
 
     return openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE words (
@@ -41,13 +42,36 @@ class DBHelper {
           )
         ''');
         await _createV2Tables(db);
+        await _createV3Tables(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await _createV2Tables(db);
         }
+        if (oldVersion < 3) {
+          await _createV3Tables(db);
+        }
       },
     );
+  }
+
+  Future<void> _createV3Tables(Database db) async {
+    await db.execute('''
+      CREATE TABLE notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE ai_chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      )
+    ''');
   }
 
   Future<void> _createV2Tables(Database db) async {
@@ -307,5 +331,66 @@ class DBHelper {
       orderBy: 'word ASC',
       limit: 50,
     );
+  }
+
+  // ---- Notes ----
+
+  Future<int> insertNote(Note note) async {
+    final db = await database;
+    return db.insert('notes', note.toMap()..remove('id'));
+  }
+
+  Future<int> updateNote(Note note) async {
+    final db = await database;
+    return db.update('notes', note.toMap(), where: 'id = ?', whereArgs: [note.id]);
+  }
+
+  Future<int> deleteNote(int id) async {
+    final db = await database;
+    return db.delete('notes', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Note>> getAllNotes() async {
+    final db = await database;
+    final maps = await db.query('notes', orderBy: 'updated_at DESC');
+    return maps.map((m) => Note.fromMap(m)).toList();
+  }
+
+  // ---- AI chat history ----
+
+  Future<void> insertAiMessage(String role, String content) async {
+    final db = await database;
+    await db.insert('ai_chat_messages', {
+      'role': role,
+      'content': content,
+      'created_at': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  /// Returns the most recent [limit] messages, oldest first, so they can be
+  /// fed back to the API as conversation history.
+  Future<List<Map<String, dynamic>>> getRecentAiMessages({int limit = 20}) async {
+    final db = await database;
+    final rows = await db.query('ai_chat_messages',
+        orderBy: 'id DESC', limit: limit);
+    return rows.reversed.toList();
+  }
+
+  Future<void> clearAiChat() async {
+    final db = await database;
+    await db.delete('ai_chat_messages');
+  }
+
+  /// Words the learner struggles with most (wrong_count > correct_count),
+  /// used to give the AI tutor real context about the learner's weaknesses.
+  Future<List<Word>> getWeakWords({int limit = 15}) async {
+    final db = await database;
+    final maps = await db.query(
+      'words',
+      where: 'wrong_count > 0',
+      orderBy: '(wrong_count - correct_count) DESC',
+      limit: limit,
+    );
+    return maps.map((m) => Word.fromMap(m)).toList();
   }
 }

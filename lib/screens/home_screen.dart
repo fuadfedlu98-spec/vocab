@@ -5,6 +5,8 @@ import 'quiz_screen.dart';
 import 'settings_screen.dart';
 import 'book_home_screen.dart';
 import 'dictionary_screen.dart';
+import 'notes_screen.dart';
+import 'ai_tutor_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -27,10 +29,22 @@ class HomeScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => const BookHomeScreen())),
             ),
             _HomeTile(
+              icon: Icons.smart_toy_outlined,
+              label: 'AI Tutor',
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const AiTutorScreen())),
+            ),
+            _HomeTile(
               icon: Icons.import_contacts,
               label: 'Dictionary',
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const DictionaryScreen())),
+            ),
+            _HomeTile(
+              icon: Icons.sticky_note_2_outlined,
+              label: 'My Notes',
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const NotesScreen())),
             ),
             _HomeTile(
               icon: Icons.add_circle_outline,
